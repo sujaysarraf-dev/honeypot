@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attacker Tracking - HPD Security Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #dbeafe, #e9d5ff);
+            padding: 40px;
+            min-height: 100vh;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: auto;
+            background: #0f172a;
+            border-radius: 30px;
+            padding: 30px;
+            color: white;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.25);
+        }
+        
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+        
+        .back-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .back-link:hover {
+            color: #93c5fd;
+        }
+        
+        .filter-bar {
+            background: #1e293b;
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-input {
+            background: #0f172a;
+            border: 2px solid #334155;
+            color: #cbd5e1;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+            transition: all 0.3s;
+        }
+        
+        .filter-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96,165,250,0.1);
+        }
+        
+        .attacker-card {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 4px solid #60a5fa;
+            transition: all 0.3s;
+        }
+        
+        .attacker-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .attacker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .attacker-ip {
+            font-size: 24px;
+            font-weight: 700;
+            color: #60a5fa;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .severity-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .severity-critical { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+        .severity-high { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+        .severity-medium { background: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
+        .severity-low { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        
+        .location-info {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .location-info h4 {
+            color: #22c55e;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .location-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        
+        .attack-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .attack-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-critical {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .badge-high {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .badge-medium {
+            background: #60a5fa;
+            color: white;
+        }
+        
+        .badge-low {
+            background: #22c55e;
+            color: #0f172a;
+        }
+        
+        .attacker-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 12px;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-value {
+            color: #60a5fa;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .sessions-list {
+            margin-top: 20px;
+        }
+        
+        .session-item {
+            background: #0f172a;
+            padding: 18px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            border-left: 3px solid #60a5fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .session-item:hover {
+            background: #1e293b;
+            transform: translateX(5px);
+        }
+        
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .session-protocol {
+            color: #60a5fa;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .session-time {
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        .session-details {
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .badge-ssh {
+            background: #22c55e;
+            color: #0f172a;
+        }
+        
+        .badge-http {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .badge-db {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .badge-ftp {
+            background: #60a5fa;
+            color: white;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow-y: auto;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background: #1e293b;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #334155;
+        }
+        
+        .modal-header h2 {
+            color: #60a5fa;
+        }
+        
+        .close {
+            color: #94a3b8;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.3s;
+        }
+        
+        .close:hover {
+            color: white;
+        }
+        
+        .json-view {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #22c55e;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .dashboard {
+                padding: 20px;
+                border-radius: 20px;
+            }
+            
+            .attacker-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="topbar">
+            <div>
+                <a href="/" class="back-link">← Back to Dashboard</a>
+                <h1 style="color: #60a5fa; margin-top: 10px; font-size: 24px;">🎯 Attacker Tracking</h1>
+                <p style="color: #94a3b8; margin-top: 5px; font-size: 14px;">View all attackers and their activities by IP address</p>
+            </div>
+        </div>
+        
+        <div class="filter-bar">
+            <input type="text" id="ip-filter" class="filter-input" placeholder="Filter by IP address...">
+            <select id="protocol-filter" class="filter-input" style="flex: 0 0 180px;">
+                <option value="">All Protocols</option>
+                <option value="ssh">SSH</option>
+                <option value="http">HTTP</option>
+                <option value="postgres">PostgreSQL</option>
+                <option value="mysql">MySQL</option>
+                <option value="smb">SMB</option>
+                <option value="ftp">FTP</option>
+            </select>
+        </div>
+        
+        <div id="attackers-container">
+            <div class="empty-state">
+                <p>Loading attackers...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Session Details</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+    
+    <script>
+        let allSessions = [];
+        let attackers = {};
+        
+        async function loadAttackers() {
+            try {
+                // Use new attackers summary API
+                const response = await fetch('/api/attackers-summary');
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error(`Failed to load attackers: ${response.status}`);
+                }
+                const attackersData = await response.json();
+                
+                // Also get individual sessions for details
+                const sessionsResponse = await fetch('/api/sessions?limit=1000');
+                if (!sessionsResponse.ok) {
+                    throw new Error(`Failed to load sessions: ${sessionsResponse.status}`);
+                }
+                allSessions = await sessionsResponse.json();
+                
+                // Use attackers summary data
+                attackers = {};
+                attackersData.forEach(attacker => {
+                    attackers[attacker.ip] = attacker;
+                    // Convert attack_categories array back to Set for compatibility
+                    attacker.protocols = new Set();
+                    attacker.totalCommands = 0;
+                    attacker.totalLogins = 0;
+                    attacker.firstSeen = null;
+                    attacker.lastSeen = null;
+                    
+                    // Process sessions
+                    if (attacker.sessions) {
+                        attacker.sessions.forEach(session => {
+                            const fullSession = allSessions.find(s => s.session_id === session.session_id || s.file === session.session_id);
+                            if (fullSession) {
+                                if (fullSession.protocol) {
+                                    attacker.protocols.add(fullSession.protocol);
+                                }
+                                if (fullSession.commands) {
+                                    attacker.totalCommands += fullSession.commands.length;
+                                }
+                                if (fullSession.login_attempts) {
+                                    attacker.totalLogins += fullSession.login_attempts.length;
+                                }
+                                if (!attacker.firstSeen || new Date(fullSession.start_time) < new Date(attacker.firstSeen)) {
+                                    attacker.firstSeen = fullSession.start_time;
+                                }
+                                if (!attacker.lastSeen || new Date(fullSession.start_time) > new Date(attacker.lastSeen)) {
+                                    attacker.lastSeen = fullSession.start_time;
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                renderAttackers();
+            } catch (error) {
+                console.error('Error loading attackers:', error);
+                document.getElementById('attackers-container').innerHTML = 
+                    `<div class="empty-state"><p>Error loading attackers: ${error.message}</p></div>`;
+            }
+        }
+        
+        function renderAttackers() {
+            const container = document.getElementById('attackers-container');
+            const ipFilter = document.getElementById('ip-filter').value.toLowerCase();
+            const protocolFilter = document.getElementById('protocol-filter').value;
+            
+            const filtered = Object.values(attackers).filter(attacker => {
+                const matchesIP = attacker.ip.toLowerCase().includes(ipFilter);
+                const matchesProtocol = !protocolFilter || Array.from(attacker.protocols).some(p => 
+                    p.toLowerCase().includes(protocolFilter.toLowerCase())
+                );
+                return matchesIP && matchesProtocol;
+            });
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">No attackers found</div>';
+                return;
+            }
+            
+            // Sort by number of sessions (most active first)
+            filtered.sort((a, b) => (b.sessions ? b.sessions.length : 0) - (a.sessions ? a.sessions.length : 0));
+            
+            container.innerHTML = filtered.map(attacker => {
+                const protocols = Array.from(attacker.protocols);
+                const protocolBadges = protocols.map(p => {
+                    const badgeClass = `badge-${p.toLowerCase().replace('postgresql', 'db').replace('mysql', 'db')}`;
+                    return `<span class="badge ${badgeClass}">${p.toUpperCase()}</span>`;
+                }).join('');
+                
+                const sessionsHtml = attacker.sessions ? attacker.sessions.map(session => {
+                    const protocol = session.protocol || 'Unknown';
+                    const badgeClass = `badge-${protocol.toLowerCase().replace('postgresql', 'db').replace('mysql', 'db')}`;
+                    const attackCount = session.attacks ? session.attacks.length : 0;
+                    const attackBadges = session.attacks ? session.attacks.map(a => 
+                        `<span class="attack-badge badge-${a.severity || 'medium'}" style="font-size: 10px; padding: 4px 8px;">${a.icon || ''} ${a.name || a.category}</span>`
+                    ).join('') : '';
+                    
+                    return `
+                        <div class="session-item" onclick="showSessionDetails('${session.session_id || session.file || ''}')">
+                            <div class="session-header">
+                                <span class="session-protocol">
+                                    <span class="badge ${badgeClass}">${protocol.toUpperCase()}</span>
+                                    ${session.session_id || session.file || 'Session'}
+                                </span>
+                                <span class="session-time">${session.start_time ? new Date(session.start_time).toLocaleString() : 'N/A'}</span>
+                            </div>
+                            <div class="session-details">
+                                ${attackCount > 0 ? `<strong style="color: #ef4444;">${attackCount} attack(s) detected</strong><br>` : ''}
+                                ${attackBadges}
+                            </div>
+                        </div>
+                    `;
+                }).join('') : '';
+                
+                // Location info
+                const location = attacker.location || {};
+                const locationHtml = location.country !== 'Unknown' ? `
+                    <div class="location-info">
+                        <h4>📍 Location</h4>
+                        <div class="location-details">
+                            <div><strong>Country:</strong> ${location.country || 'Unknown'} ${location.country_code ? `(${location.country_code})` : ''}</div>
+                            <div><strong>City:</strong> ${location.city || 'Unknown'}</div>
+                            <div><strong>ISP:</strong> ${location.isp || 'Unknown'}</div>
+                            ${location.region ? `<div><strong>Region:</strong> ${location.region}</div>` : ''}
+                        </div>
+                    </div>
+                ` : '';
+                
+                // Attack badges
+                const attackBadgesHtml = attacker.attack_categories && attacker.attack_categories.length > 0
+                    ? attacker.attack_categories.map(cat => {
+                        const severity = cat.includes('sql') || cat.includes('command') || cat.includes('malware') ? 'critical' : 
+                                        cat.includes('brute') || cat.includes('path') || cat.includes('xss') ? 'high' : 'medium';
+                        return `<span class="attack-badge badge-${severity}">${cat.replace('_', ' ').toUpperCase()}</span>`;
+                    }).join('')
+                    : '<span class="attack-badge badge-low">No attacks detected</span>';
+                
+                // Severity indicator
+                const maxSeverity = attacker.severity_counts && attacker.severity_counts.critical > 0 ? 'critical' :
+                                   attacker.severity_counts && attacker.severity_counts.high > 0 ? 'high' :
+                                   attacker.severity_counts && attacker.severity_counts.medium > 0 ? 'medium' : 'low';
+                
+                return `
+                    <div class="attacker-card">
+                        <div class="attacker-header">
+                            <div>
+                                <div class="attacker-ip">
+                                    <span class="severity-indicator severity-${maxSeverity}"></span>
+                                    ${attacker.ip}
+                                </div>
+                                <div style="margin-top: 8px; color: #94a3b8; font-size: 14px;">
+                                    ${location.country || 'Unknown Location'}
+                                </div>
+                            </div>
+                            <div>${protocolBadges}</div>
+                        </div>
+                        ${locationHtml}
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #94a3b8; margin-bottom: 12px; font-size: 14px;">Attack Types:</h4>
+                            <div class="attack-badges">${attackBadgesHtml}</div>
+                        </div>
+                        <div class="attacker-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Total Sessions</div>
+                                <div class="stat-value">${attacker.sessions ? attacker.sessions.length : 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Total Attacks</div>
+                                <div class="stat-value" style="color: ${attacker.total_attacks > 0 ? '#ef4444' : '#22c55e'}">${attacker.total_attacks || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Critical</div>
+                                <div class="stat-value" style="color: #ef4444">${attacker.severity_counts ? attacker.severity_counts.critical : 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">High</div>
+                                <div class="stat-value" style="color: #f59e0b">${attacker.severity_counts ? attacker.severity_counts.high : 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Commands</div>
+                                <div class="stat-value">${attacker.totalCommands || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Login Attempts</div>
+                                <div class="stat-value">${attacker.totalLogins || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">First Seen</div>
+                                <div class="stat-value" style="font-size: 12px;">${attacker.firstSeen ? new Date(attacker.firstSeen).toLocaleString() : 'N/A'}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Last Seen</div>
+                                <div class="stat-value" style="font-size: 12px;">${attacker.lastSeen ? new Date(attacker.lastSeen).toLocaleString() : 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div class="sessions-list">
+                            <h4 style="margin-bottom: 15px; color: #94a3b8; font-size: 14px;">Sessions (${attacker.sessions ? attacker.sessions.length : 0}):</h4>
+                            ${sessionsHtml || '<p style="color: #64748b; padding: 10px;">No sessions available</p>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function showSessionDetails(sessionId) {
+            try {
+                if (!sessionId) return;
+                const response = await fetch(`/api/session/${sessionId}`);
+                if (!response.ok) throw new Error('Failed to load session');
+                const details = await response.json();
+                showModal('Session Details', JSON.stringify(details, null, 2));
+            } catch (error) {
+                console.error('Error loading session:', error);
+            }
+        }
+        
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = `<div class="json-view">${content}</div>`;
+            document.getElementById('modal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+        
+        // Filter handlers
+        document.getElementById('ip-filter').addEventListener('input', renderAttackers);
+        document.getElementById('protocol-filter').addEventListener('change', renderAttackers);
+        
+        // Close modal on outside click (mouse and touch)
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        };
+        
+        // Close modal on touch devices
+        window.ontouchstart = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        };
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAttackers();
+        });
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadAttackers, 30000);
+    </script>
+</body>
+</html>

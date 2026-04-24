@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Map — HPD Security</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --void: #0D0D12;
+            --cosmic: #1A1429;
+            --nebula: #2D1F4F;
+            --aurora: #7C3AED;
+            --lavender: #A78BFA;
+            --coral: #F97066;
+            --teal: #14B8A6;
+            --solar: #FBBF24;
+            --pink: #EC4899;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--void);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(145deg, rgba(26,20,41,0.95) 0%, rgba(45,31,79,0.8) 100%);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(124,58,237,0.2);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header h1 i {
+            color: var(--coral);
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--coral);
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Main Container */
+        .container {
+            display: flex;
+            height: calc(100vh - 73px);
+        }
+        
+        /* Map Container */
+        .map-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        
+        #threatMap {
+            width: 100%;
+            height: 100%;
+            background: #0a0a0f;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 380px;
+            background: linear-gradient(180deg, rgba(26,20,41,0.98) 0%, rgba(13,13,18,0.98) 100%);
+            border-left: 1px solid rgba(124,58,237,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Filters */
+        .filters {
+            padding: 20px;
+            border-bottom: 1px solid rgba(124,58,237,0.1);
+        }
+        
+        .filter-group {
+            margin-bottom: 16px;
+        }
+        
+        .filter-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(13,13,18,0.8);
+            border: 1px solid rgba(124,58,237,0.3);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--aurora);
+        }
+        
+        /* Threat List */
+        .threat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .threat-list-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--teal);
+        }
+        
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--teal);
+            border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        /* Threat Card */
+        .threat-card {
+            background: rgba(124,58,237,0.08);
+            border: 1px solid rgba(124,58,237,0.15);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .threat-card:hover {
+            background: rgba(124,58,237,0.12);
+            border-color: rgba(124,58,237,0.3);
+            transform: translateX(4px);
+        }
+        
+        .threat-card.new {
+            animation: slideIn 0.5s ease;
+            border-color: var(--coral);
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .threat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .threat-type {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .threat-type i {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        
+        .severity-critical { color: #ef4444; }
+        .severity-critical i { background: rgba(239,68,68,0.15); }
+        
+        .severity-high { color: var(--coral); }
+        .severity-high i { background: rgba(249,112,102,0.15); }
+        
+        .severity-medium { color: var(--solar); }
+        .severity-medium i { background: rgba(251,191,36,0.15); }
+        
+        .severity-low { color: var(--teal); }
+        .severity-low i { background: rgba(20,184,166,0.15); }
+        
+        .threat-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        
+        .threat-location {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .threat-ip {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--lavender);
+            background: rgba(124,58,237,0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .threat-details {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(124,58,237,0.1);
+        }
+        
+        .detail-item {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        
+        .detail-item span {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        /* Legend */
+        .legend {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            background: rgba(13,13,18,0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(124,58,237,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            z-index: 500;
+        }
+        
+        .legend-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+        
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .dot-critical { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+        .dot-high { background: var(--coral); box-shadow: 0 0 8px var(--coral); }
+        .dot-medium { background: var(--solar); box-shadow: 0 0 8px var(--solar); }
+        .dot-low { background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--void);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(124,58,237,0.2);
+            border-top-color: var(--aurora);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 320px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+                border-left: none;
+                border-top: 1px solid rgba(124,58,237,0.2);
+            }
+            
+            .header-stats {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <p style="color: var(--text-secondary);">Initializing Threat Map...</p>
+    </div>
+    
+    <!-- Header -->
+    <header class="header">
+        <h1>
+            <i class="fas fa-globe-americas"></i>
+            Global Threat Map
+        </h1>
+        <div class="header-stats">
+            <div class="stat-item">
+                <div class="stat-value" id="activeThreats">0</div>
+                <div class="stat-label">Active Threats</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="attacksBlocked">0</div>
+                <div class="stat-label">Attacks Blocked</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="uniqueCountries">0</div>
+                <div class="stat-label">Countries</div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Map -->
+        <div class="map-wrapper">
+            <div id="threatMap"></div>
+            
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-title">Threat Level</div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-critical"></div>
+                    <span>Critical</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-high"></div>
+                    <span>High</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-medium"></div>
+                    <span>Medium</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-low"></div>
+                    <span>Low</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Filters -->
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Severity Filter</label>
+                    <select class="filter-select" id="severityFilter" onchange="filterThreats()">
+                        <option value="all">All Severities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Attack Type</label>
+                    <select class="filter-select" id="typeFilter" onchange="filterThreats()">
+                        <option value="all">All Types</option>
+                        <option value="brute_force">Brute Force</option>
+                        <option value="sql_injection">SQL Injection</option>
+                        <option value="xss">XSS</option>
+                        <option value="ddos">DDoS</option>
+                        <option value="port_scan">Port Scan</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Threat List -->
+            <div class="threat-list">
+                <div class="threat-list-title">
+                    <span>Recent Threats</span>
+                    <div class="live-indicator">
+                        <div class="live-dot"></div>
+                        <span>LIVE</span>
+                    </div>
+                </div>
+                <div id="threatListContainer">
+                    <!-- Threat cards will be inserted here -->
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Global variables
+        let map;
+        let markers = [];
+        let threats = [];
+        let updateInterval;
+        
+        // Attack type icons
+        const attackIcons = {
+            'brute_force': 'fa-key',
+            'sql_injection': 'fa-database',
+            'xss': 'fa-code',
+            'ddos': 'fa-network-wired',
+            'port_scan': 'fa-search',
+            'path_traversal': 'fa-folder-open',
+            'command_injection': 'fa-terminal',
+            'malware_drop': 'fa-bug'
+        };
+        
+        // Initialize map
+        function initMap() {
+            // Create map centered on world view
+            map = L.map('threatMap', {
+                center: [30, 0],
+                zoom: 2.5,
+                minZoom: 2,
+                maxZoom: 10,
+                zoomControl: false,
+                attributionControl: false
+            });
+            
+            // Add zoom control to top right
+            L.control.zoom({
+                position: 'topright'
+            }).addTo(map);
+            
+            // Add dark theme tile layer (CartoDB Dark Matter)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Load initial threat data
+            loadThreatData();
+            
+            // Start live updates
+            startLiveUpdates();
+            
+            // Hide loading overlay
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 1000);
+        }
+        
+        // Load threat data from API
+        async function loadThreatData() {
+            try {
+                const response = await fetch('/api/threats');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    threats = data.threats;
+                    renderThreats(threats);
+                    updateStats(data.threats);
+                }
+            } catch (error) {
+                console.error('Failed to load threats:', error);
+                // Load mock data if API fails
+                loadMockData();
+            }
+        }
+        
+        // Load mock data for testing
+        function loadMockData() {
+            threats = [
+                {
+                    id: 'threat_001',
+                    ip: '192.168.1.100',
+                    country: 'CN',
+                    country_name: 'China',
+                    city: 'Beijing',
+                    lat: 39.9042,
+                    lon: 116.4074,
+                    attack_type: 'brute_force',
+                    severity: 'high',
+                    timestamp: new Date().toISOString(),
+                    attempts: 45
+                },
+                {
+                    id: 'threat_002',
+                    ip: '10.0.0.50',
+                    country: 'RU',
+                    country_name: 'Russia',
+                    city: 'Moscow',
+                    lat: 55.7558,
+                    lon: 37.6173,
+                    attack_type: 'sql_injection',
+                    severity: 'critical',
+                    timestamp: new Date(Date.now() - 300000).toISOString(),
+                    attempts: 12
+                },
+                {
+                    id: 'threat_003',
+                    ip: '172.16.0.25',
+                    country: 'US',
+                    country_name: 'United States',
+                    city: 'New York',
+                    lat: 40.7128,
+                    lon: -74.0060,
+                    attack_type: 'xss',
+                    severity: 'medium',
+                    timestamp: new Date(Date.now() - 600000).toISOString(),
+                    attempts: 8
+                }
+            ];
+            
+            renderThreats(threats);
+            updateStats(threats);
+        }
+        
+        // Render threats on map and sidebar
+        function renderThreats(threatList) {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            // Clear sidebar
+            const container = document.getElementById('threatListContainer');
+            container.innerHTML = '';
+            
+            // Add markers and cards
+            threatList.forEach(threat => {
+                addThreatMarker(threat);
+                addThreatCard(threat);
+            });
+        }
+        
+        // Add threat marker to map
+        function addThreatMarker(threat) {
+            const color = getSeverityColor(threat.severity);
+            const icon = getAttackIcon(threat.attack_type);
+            
+            // Create custom marker
+            const markerHtml = `
+                <div style="
+                    background: ${color};
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    box-shadow: 0 0 10px ${color};
+                    animation: pulse 2s infinite;
+                "></div>
+            `;
+            
+            const customIcon = L.divIcon({
+                html: markerHtml,
+                className: 'custom-marker',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+            
+            if (threat.lat === undefined || threat.lon === undefined || isNaN(parseFloat(threat.lat)) || isNaN(parseFloat(threat.lon))) return;
+            
+            const marker = L.marker([threat.lat, threat.lon], { icon: customIcon })
+                .addTo(map);
+            
+            // Add popup
+            const popupContent = `
+                <div style="font-family: Inter, sans-serif; min-width: 200px;">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: ${color};">
+                        <i class="fas ${icon}"></i> ${formatAttackType(threat.attack_type)}
+                    </div>
+                    <div style="font-size: 13px; color: #666; margin-bottom: 4px;">
+                        <i class="fas fa-map-marker-alt"></i> ${threat.country_name}
+                    </div>
+                    <div style="font-size: 12px; color: #888; font-family: monospace;">
+                        ${threat.ip}
+                    </div>
+                    <div style="font-size: 11px; color: #999; margin-top: 8px;">
+                        ${formatTime(threat.timestamp)}
+                    </div>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            markers.push(marker);
+        }
+        
+        // Add threat card to sidebar
+        function addThreatCard(threat, isNew = false) {
+            const container = document.getElementById('threatListContainer');
+            const card = document.createElement('div');
+            card.className = `threat-card severity-${threat.severity} ${isNew ? 'new' : ''}`;
+            card.id = `threat-${threat.id}`;
+            
+            const icon = getAttackIcon(threat.attack_type);
+            
+            card.innerHTML = `
+                <div class="threat-header">
+                    <div class="threat-type severity-${threat.severity}">
+                        <i class="fas ${icon}"></i>
+                        <span>${formatAttackType(threat.attack_type)}</span>
+                    </div>
+                    <div class="threat-time">${formatTime(threat.timestamp)}</div>
+                </div>
+                <div class="threat-location">
+                    <i class="fas fa-flag"></i>
+                    <span>${threat.country_name} (${threat.country})</span>
+                </div>
+                <div class="threat-ip">
+                    <i class="fas fa-network-wired"></i> ${threat.ip}
+                </div>
+                <div class="threat-details">
+                    <div class="detail-item">
+                        Severity: <span class="severity-${threat.severity}">${threat.severity.toUpperCase()}</span>
+                    </div>
+                    <div class="detail-item">
+                        Attempts: <span>${threat.attempts || 1}</span>
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => {
+                if (threat.lat !== undefined && threat.lon !== undefined) {
+                    map.setView([threat.lat, threat.lon], 6);
+                }
+                // Find and open popup
+                markers.forEach(marker => {
+                    const markerLatLng = marker.getLatLng();
+                    if (threat.lat !== undefined && threat.lon !== undefined && 
+                        Math.abs(markerLatLng.lat - threat.lat) < 0.01 && 
+                        Math.abs(markerLatLng.lng - threat.lon) < 0.01) {
+                        marker.openPopup();
+                    }
+                });
+            });
+            
+            container.insertBefore(card, container.firstChild);
+            
+            // Limit number of cards
+            while (container.children.length > 20) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        // Filter threats
+        function filterThreats() {
+            const severityFilter = document.getElementById('severityFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            
+            const filtered = threats.filter(threat => {
+                const severityMatch = severityFilter === 'all' || threat.severity === severityFilter;
+                const typeMatch = typeFilter === 'all' || threat.attack_type === typeFilter;
+                return severityMatch && typeMatch;
+            });
+            
+            renderThreats(filtered);
+        }
+        
+        // Start live updates
+        function startLiveUpdates() {
+            // Update every 10 seconds
+            updateInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/threats/live');
+                    const data = await response.json();
+                    
+                    if (data.status === 'success' && data.threats.length > 0) {
+                        data.threats.forEach(threat => {
+                            threats.unshift(threat);
+                            addThreatMarker(threat);
+                            addThreatCard(threat, true);
+                        });
+                        updateStats(threats);
+                    }
+                } catch (error) {
+                    console.error('Live update failed:', error);
+                }
+            }, 10000);
+        }
+        
+        // Update statistics
+        function updateStats(threatList) {
+            document.getElementById('activeThreats').textContent = threatList.length;
+            document.getElementById('attacksBlocked').textContent = 
+                threatList.reduce((sum, t) => sum + (t.attempts || 1), 0);
+            
+            const uniqueCountries = new Set(threatList.map(t => t.country)).size;
+            document.getElementById('uniqueCountries').textContent = uniqueCountries;
+        }
+        
+        // Helper functions
+        function getSeverityColor(severity) {
+            const colors = {
+                'critical': '#ef4444',
+                'high': '#F97066',
+                'medium': '#FBBF24',
+                'low': '#14B8A6'
+            };
+            return colors[severity] || '#94A3B8';
+        }
+        
+        function getAttackIcon(attackType) {
+            return attackIcons[attackType] || 'fa-exclamation-triangle';
+        }
+        
+        function formatAttackType(type) {
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            
+            if (diff < 60) return 'Just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html>
