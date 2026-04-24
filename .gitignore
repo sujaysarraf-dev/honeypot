@@ -86,3 +86,14 @@ Thumbs.db
 .DS_Store
 *.lnk
 
+# Runtime data (DO NOT COMMIT)
+data/
+logs/
+*.log
+*.pcap
+*.pcap0
+*.json
+
+services/*/data/
+
+.env
