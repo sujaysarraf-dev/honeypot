@@ -90,8 +90,8 @@ class TelegramBot:
         
         # Validate configuration
         if not bot_token or not chat_id:
-            logger.warning("Telegram bot not fully configured - alerts will be disabled")
             self.enabled = False
+            return
         else:
             self.enabled = True
             logger.info("Telegram bot initialized successfully")
@@ -99,7 +99,6 @@ class TelegramBot:
     def send_message(self, message: str, parse_mode: str = 'HTML') -> bool:
         """Send message with retry logic"""
         if not self.enabled:
-            logger.debug("Telegram bot disabled - skipping alert")
             return False
         
         url = f"{self.base_url}/sendMessage"
@@ -123,7 +122,7 @@ class TelegramBot:
                     logger.warning(f"Telegram rate limited. Retrying after {retry_after}s")
                     time.sleep(retry_after)
                 else:
-                    logger.error(f"Telegram API error: {response.status_code} - {response.text}")
+                    logger.debug(f"Telegram API error: {response.status_code} - {response.text}")
                     if attempt < self.max_retries - 1:
                         time.sleep(self.retry_delay * (attempt + 1))
                         
@@ -141,7 +140,6 @@ class TelegramBot:
                 logger.error(f"Unexpected error sending Telegram message: {e}")
                 return False
         
-        logger.error("Failed to send Telegram alert after all retries")
         return False
     
     def test_connection(self) -> bool:

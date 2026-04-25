@@ -1,22 +1,23 @@
 # ============================================
-# Honeypot Platform - Git Ignore
+# Honeypot Platform - Clean Git Ignore
 # ============================================
 
-# Environment variables
+# 🔴 Environment variables (CRITICAL)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
-# Data and logs
-data/*
-!data/.gitkeep
-*.log
-*.pcap
-*.pcapng
-*.json
+# 🔴 Runtime data (DO NOT COMMIT)
+data/
+logs/
 captures/
 sessions/
 iocs/
+
+# Packet captures & logs
+*.log
+*.pcap
+*.pcapng
 
 # Python
 __pycache__/
@@ -24,76 +25,39 @@ __pycache__/
 *.pyc
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
 # Virtual environments
 venv/
 env/
-ENV/
-env.bak/
-venv.bak/
-.venv
+.venv/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-*.sublime-project
-*.sublime-workspace
+# Build / distribution
+build/
+dist/
+*.egg-info/
 
-# Testing
+# Testing / coverage
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
 .nox/
-.hypothesis/
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
 
 # Docker
 .dockerignore
 
-# Obsidian (if used for docs)
-.obsidian/
-
 # Temporary files
 *.tmp
-*.temp
 *.bak
 *.backup
-
-# OS files
-Thumbs.db
-.DS_Store
-*.lnk
-
-# Runtime data (DO NOT COMMIT)
-data/
-logs/
-*.log
-*.pcap
-*.pcap0
-*.json
-
-services/*/data/
-
-.env

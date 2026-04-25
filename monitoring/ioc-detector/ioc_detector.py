@@ -56,44 +56,44 @@ alert_manager = get_alert_manager()
 # IOC patterns
 IOC_PATTERNS = {
     'sql_injection': [
-        r"union.*select",
-        r"';.*--",
-        r"or.*1=1",
-        r"drop.*table",
-        r"exec.*xp_",
+        r"union\s+select",
+        r"or\s+1=1",
+        r"'\s*or\s*'1'='1",
+        r"drop\s+table",
+        r"exec\s+xp_",
     ],
     'command_injection': [
-        r";.*cat.*\/etc\/passwd",
-        r"\|.*bash",
-        r"`.*whoami",
-        r"\$\(.*id\)",
-        r"cmd\.exe",
+        r";",
+        r"\|\|",
+        r"\|",
+        r"`.*`",
+        r"\$\(",
     ],
     'path_traversal': [
-        r"\.\.\/",
+        r"\.\./",
         r"\.\.\\",
-        r"\/etc\/passwd",
-        r"\/etc\/shadow",
-        r"c:\\windows\\system32",
+        r"/etc/passwd",
+        r"/etc/shadow",
+        r"boot.ini",
     ],
     'xss': [
-        r"<script>",
+        r"<script.*?>",
         r"javascript:",
         r"onerror=",
         r"onload=",
     ],
     'malicious_commands': [
-        r"wget.*http",
-        r"curl.*http",
-        r"nc.*-e",
-        r"bash.*-i",
-        r"python.*-c",
-        r"perl.*-e",
+        r"wget\s+http",
+        r"curl\s+http",
+        r"nc\s+-e",
+        r"bash\s+-i",
+        r"python\s+-c",
+        r"perl\s+-e",
     ],
     'credential_harvesting': [
-        r"password.*=.*['\"]",
-        r"passwd.*=.*['\"]",
-        r"pwd.*=.*['\"]",
+        r"password\s*=\s*['\"]",
+        r"passwd\s*=\s*['\"]",
+        r"pwd\s*=\s*['\"]",
     ],
 }
 
@@ -129,11 +129,15 @@ class IOCDetector:
         
     def save_ioc(self, ioc):
         """Save detected IOC to file"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        ioc_file = iocs_dir / f"ioc_{timestamp}.json"
         try:
+            iocs_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            unique = int(time.time() * 1000)
+            ioc_file = iocs_dir / f"ioc_{timestamp}_{unique}.json"
+
             with open(ioc_file, 'w') as f:
                 json.dump(ioc, f, indent=2)
+
         except Exception as e:
             logger.error(f"Failed to save IOC: {e}")
 

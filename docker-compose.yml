@@ -86,8 +86,7 @@ services:
       context: ./monitoring/packet-capture
       dockerfile: Dockerfile
     container_name: packet-capture
-    networks:
-      - honeypot-network
+    network_mode: host
     volumes:
       - ./data/pcaps:/pcaps
       - ./data/logs:/logs
