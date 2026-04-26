@@ -32,7 +32,7 @@ pcaps_dir.mkdir(parents=True, exist_ok=True)
 
 def start_tcpdump():
     """Start tcpdump to capture packets"""
-    interface = os.getenv('INTERFACE', 'eth0')
+    interface = os.getenv('INTERFACE', 'any')
     capture_size = os.getenv('CAPTURE_SIZE', '100M')
     
     # Generate filename with timestamp
