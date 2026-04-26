@@ -63,11 +63,10 @@ IOC_PATTERNS = {
         r"exec\s+xp_",
     ],
     'command_injection': [
-        r";",
-        r"\|\|",
-        r"\|",
-        r"`.*`",
-        r"\$\(",
+        r";\s*(cat|ls|whoami|id)",
+        r"\|\s*bash",
+        r"wget\s+http",
+        r"curl\s+http"
     ],
     'path_traversal': [
         r"\.\./",

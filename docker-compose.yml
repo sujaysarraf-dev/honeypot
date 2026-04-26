@@ -91,7 +91,7 @@ services:
       - ./data/pcaps:/pcaps
       - ./data/logs:/logs
     environment:
-      - INTERFACE=eth0
+      - INTERFACE=any
       - CAPTURE_SIZE=100M
     restart: unless-stopped
     cap_add:
