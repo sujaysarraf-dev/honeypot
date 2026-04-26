@@ -48,7 +48,7 @@ def start_tcpdump():
         '-w', str(pcap_file),
         '-C', '100',  # Rotate files at 100MB
         '-W', '10',   # Keep 10 files
-        '-v'          # Verbose
+        '-U'          # Verbose
     ]
     
     try:
