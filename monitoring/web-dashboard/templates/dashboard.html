@@ -2716,11 +2716,56 @@ function closeSidebar() {
 }
 
 function blockIP(ip) {
-    alert('IP ' + ip + ' blocked (demo)');
+    fetch('/api/block-ip', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ip: ip, reason: 'manual_block'})
+    }).then(r => r.json()).then(data => {
+        if (data.status === 'success') {
+            showNotification('IP ' + ip + ' blocked successfully!', 'success');
+        } else {
+            showNotification('Failed to block IP: ' + (data.error || 'Unknown error'), 'error');
+        }
+    }).catch(err => {
+        showNotification('Failed to block IP: ' + err.message, 'error');
+    });
 }
 
 function addToWatchlist(ip) {
-    alert('IP ' + ip + ' added to watchlist (demo)');
+    fetch('/api/watchlist-add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ip: ip, reason: 'manual_watchlist'})
+    }).then(r => r.json()).then(data => {
+        if (data.status === 'success') {
+            showNotification('IP ' + ip + ' added to watchlist!', 'success');
+        } else {
+            showNotification('Failed to add to watchlist: ' + (data.error || 'Unknown error'), 'error');
+        }
+    }).catch(err => {
+        showNotification('Failed to add to watchlist: ' + err.message, 'error');
+    });
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        background: ${type === 'success' ? '#10B981' : '#ef4444'};
+        color: white;
+        border-radius: 8px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 function formatTimestamp(timestamp) {

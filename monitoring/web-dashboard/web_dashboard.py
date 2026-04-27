@@ -416,9 +416,100 @@ def api_threat_map():
     return jsonify({
         'status': 'success',
         'count': len(threats),
-        'threats': threats[:100],  # Limit to 100
+        'threats': threats[:100],
         'generated_at': datetime.utcnow().isoformat()
     })
+
+
+@app.route('/api/block-ip', methods=['POST'])
+def api_block_ip():
+    """Block an IP address"""
+    data = request.get_json()
+    ip = data.get('ip', '')
+    
+    if not ip:
+        return jsonify({'error': 'IP required'}), 400
+    
+    # Load existing blocked IPs
+    blocked_file = Path("/iocs/blocked_ips.json")
+    blocked = []
+    if blocked_file.exists():
+        try:
+            blocked = json.loads(blocked_file.read_text())
+        except:
+            blocked = []
+    
+    # Add new IP
+    if ip not in blocked:
+        blocked.append({
+            'ip': ip,
+            'blocked_at': datetime.utcnow().isoformat(),
+            'reason': data.get('reason', 'manual_block')
+        })
+        try:
+            blocked_file.write_text(json.dumps(blocked, indent=2))
+        except:
+            return jsonify({'error': 'Failed to save'}), 500
+    
+    return jsonify({'status': 'success', 'blocked_ips': [b['ip'] for b in blocked]})
+
+
+@app.route('/api/watchlist-add', methods=['POST'])
+def api_watchlist_add():
+    """Add IP to watchlist"""
+    data = request.get_json()
+    ip = data.get('ip', '')
+    
+    if not ip:
+        return jsonify({'error': 'IP required'}), 400
+    
+    # Load existing watchlist
+    watchlist_file = Path("/iocs/watchlist.json")
+    watchlist = []
+    if watchlist_file.exists():
+        try:
+            watchlist = json.loads(watchlist_file.read_text())
+        except:
+            watchlist = []
+    
+    # Check if already in watchlist
+    if not any(w['ip'] == ip for w in watchlist):
+        watchlist.append({
+            'ip': ip,
+            'added_at': datetime.utcnow().isoformat(),
+            'reason': data.get('reason', 'manual_watchlist'),
+            'notes': data.get('notes', '')
+        })
+        try:
+            watchlist_file.write_text(json.dumps(watchlist, indent=2))
+        except:
+            return jsonify({'error': 'Failed to save'}), 500
+    
+    return jsonify({'status': 'success', 'watchlist': [w['ip'] for w in watchlist]})
+
+
+@app.route('/api/blocked-ips')
+def api_blocked_ips():
+    """Get list of blocked IPs"""
+    blocked_file = Path("/iocs/blocked_ips.json")
+    if blocked_file.exists():
+        try:
+            return jsonify({'status': 'success', 'blocked': json.loads(blocked_file.read_text())})
+        except:
+            pass
+    return jsonify({'status': 'success', 'blocked': []})
+
+
+@app.route('/api/watchlist')
+def api_watchlist():
+    """Get watchlist"""
+    watchlist_file = Path("/iocs/watchlist.json")
+    if watchlist_file.exists():
+        try:
+            return jsonify({'status': 'success', 'watchlist': json.loads(watchlist_file.read_text())})
+        except:
+            pass
+    return jsonify({'status': 'success', 'watchlist': []})
 
 
 @app.route('/api/iocs')
