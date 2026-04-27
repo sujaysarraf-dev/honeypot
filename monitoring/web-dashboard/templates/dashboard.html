@@ -1364,38 +1364,12 @@ body{
             </div>
 
 <div class="card">
-                <h3>Quick Stats</h3>
+                <h3>Global Threat Map</h3>
                 <div id="quickStats">
-                    <div class="stat-grid">
-                        <div class="stat-box">
-                            <div class="stat-value" id="stat-threats">-</div>
-                            <div class="stat-label">Total Threats</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value critical" id="stat-critical">-</div>
-                            <div class="stat-label">Critical</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value high" id="stat-high">-</div>
-                            <div class="stat-label">High</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value medium" id="stat-medium">-</div>
-                            <div class="stat-label">Medium</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value low" id="stat-low">-</div>
-                            <div class="stat-label">Low</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-value" id="stat-attacks">-</div>
-                            <div class="stat-label">Total Attacks</div>
-                        </div>
-                    </div>
-                    <div id="miniMap" onclick="switchToThreatMap()" style="height:150px;margin-top:16px;border-radius:12px;cursor:pointer;overflow:hidden;position:relative;">
-                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;background:rgba(13,13,18,0.8);padding:8px 16px;border-radius:8px;text-align:center;">
-                            <div style="font-size:20px;margin-bottom:4px;">🌍</div>
-                            <div style="font-size:12px;color:#94A3B8;">Click to view full map</div>
+                    <div id="miniMap" onclick="switchToThreatMap()" style="height:300px;border-radius:12px;cursor:pointer;overflow:hidden;position:relative;">
+                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;background:rgba(13,13,18,0.8);padding:12px 20px;border-radius:8px;text-align:center;">
+                            <div style="font-size:32px;margin-bottom:4px;">🌍</div>
+                            <div style="font-size:14px;color:#94A3B8;">Click to view detailed threat map</div>
                         </div>
                     </div>
                 </div>
@@ -1658,22 +1632,6 @@ async function loadThreatStats() {
         const data = await response.json();
         const threats = data.threats || [];
         
-        const counts = { critical: 0, high: 0, medium: 0, low: 0 };
-        let totalAttacks = 0;
-        
-        threats.forEach(t => {
-            const severity = t.severity?.toLowerCase();
-            if (counts[severity] !== undefined) counts[severity]++;
-            totalAttacks += t.attempts || 1;
-        });
-        
-        document.getElementById('stat-threats').textContent = threats.length;
-        document.getElementById('stat-critical').textContent = counts.critical;
-        document.getElementById('stat-high').textContent = counts.high;
-        document.getElementById('stat-medium').textContent = counts.medium;
-        document.getElementById('stat-low').textContent = counts.low;
-        document.getElementById('stat-attacks').textContent = totalAttacks;
-        
         // Initialize mini map
         initMiniMap(threats);
     } catch (error) {
@@ -1685,13 +1643,17 @@ function initMiniMap(threats) {
     const miniMapContainer = document.getElementById('miniMap');
     if (!miniMapContainer || miniMapContainer._map) return;
     
+    // Remove placeholder
+    const placeholder = miniMapContainer.querySelector('div[style*="z-index:1000"]');
+    if (placeholder) placeholder.remove();
+    
     // Create mini map
     const miniMap = L.map('miniMap', {
         center: [20, 0],
         zoom: 1,
         zoomControl: false,
         attributionControl: false,
-        dragging: false,
+        dragging: true,
         scrollWheelZoom: false,
         doubleClickZoom: false
     });
@@ -1702,17 +1664,17 @@ function initMiniMap(threats) {
         maxZoom: 19
     }).addTo(miniMap);
     
-    // Add threat markers
+    // Add threat markers with info
     threats.forEach(threat => {
         if (threat.lat && threat.lng && !isNaN(threat.lat) && !isNaN(threat.lng)) {
             const color = getSeverityColor(threat.severity);
             L.circleMarker([threat.lat, threat.lng], {
-                radius: 4,
+                radius: getSeverityRadius(threat.severity) * 0.8,
                 fillColor: color,
                 color: '#fff',
                 weight: 1,
                 fillOpacity: 0.8
-            }).addTo(miniMap);
+            }).bindPopup(`<strong>${threat.country_name}</strong><br>${threat.attack_type}<br>${threat.attempts} attempts`).addTo(miniMap);
         }
     });
 }
