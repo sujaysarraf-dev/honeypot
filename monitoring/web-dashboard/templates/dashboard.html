@@ -1617,20 +1617,21 @@ async function loadSessions() {
     try {
         const response = await fetch('/api/sessions?limit=100');
         if (!response.ok) {
-            if (response.status === 401) {
-                window.location.href = '/login';
-                return;
+            if (response.status === 401 || response.url.includes('/login')) {
+                // Skip if not logged in
+            } else {
+                throw new Error(`Failed to load sessions: ${response.status}`);
             }
-            throw new Error(`Failed to load sessions: ${response.status}`);
+        } else {
+            allSessions = await response.json();
+            
+            updateSessionsChart();
+            updateAttackCalendar();
+            updateAttackStats();
+            updateWorldMap();
+            updateCountryList();
+            renderSessionsList();
         }
-        allSessions = await response.json();
-        
-        updateSessionsChart();
-        updateAttackCalendar();
-        updateAttackStats();
-        updateWorldMap();
-        updateCountryList();
-        renderSessionsList();
     } catch (error) {
         console.error('Error loading sessions:', error);
         const list = document.getElementById('sessionsList');
@@ -1639,13 +1640,15 @@ async function loadSessions() {
         }
     }
     
-    // Load threat stats
+    // Load threat stats from mock API (no auth needed)
     loadThreatStats();
 }
 
 async function loadThreatStats() {
     try {
         const response = await fetch('/api/threats');
+        if (!response.ok) return;
+        
         const data = await response.json();
         const threats = data.threats || [];
         
