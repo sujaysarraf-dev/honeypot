@@ -1392,6 +1392,12 @@ body{
                             <div class="stat-label">Total Attacks</div>
                         </div>
                     </div>
+                    <div id="miniMap" onclick="switchToThreatMap()" style="height:150px;margin-top:16px;border-radius:12px;cursor:pointer;overflow:hidden;position:relative;">
+                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;background:rgba(13,13,18,0.8);padding:8px 16px;border-radius:8px;text-align:center;">
+                            <div style="font-size:20px;margin-bottom:4px;">🌍</div>
+                            <div style="font-size:12px;color:#94A3B8;">Click to view full map</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1667,8 +1673,56 @@ async function loadThreatStats() {
         document.getElementById('stat-medium').textContent = counts.medium;
         document.getElementById('stat-low').textContent = counts.low;
         document.getElementById('stat-attacks').textContent = totalAttacks;
+        
+        // Initialize mini map
+        initMiniMap(threats);
     } catch (error) {
         console.error('Error loading threat stats:', error);
+    }
+}
+
+function initMiniMap(threats) {
+    const miniMapContainer = document.getElementById('miniMap');
+    if (!miniMapContainer || miniMapContainer._map) return;
+    
+    // Create mini map
+    const miniMap = L.map('miniMap', {
+        center: [20, 0],
+        zoom: 1,
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false
+    });
+    
+    miniMapContainer._map = miniMap;
+    
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+    }).addTo(miniMap);
+    
+    // Add threat markers
+    threats.forEach(threat => {
+        if (threat.lat && threat.lng && !isNaN(threat.lat) && !isNaN(threat.lng)) {
+            const color = getSeverityColor(threat.severity);
+            L.circleMarker([threat.lat, threat.lng], {
+                radius: 4,
+                fillColor: color,
+                color: '#fff',
+                weight: 1,
+                fillOpacity: 0.8
+            }).addTo(miniMap);
+        }
+    });
+}
+
+function switchToThreatMap() {
+    const button = document.querySelector('.nav button[onclick*="threatmap"]');
+    if (button) {
+        button.click();
+    } else {
+        switchTab('threatmap', null);
     }
 }
 
