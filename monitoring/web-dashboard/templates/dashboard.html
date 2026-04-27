@@ -1031,32 +1031,6 @@ body{
 }
 
 @media(max-width:768px){
-    body{
-        padding:16px;
-    }
-
-    .topbar{
-        padding:16px;
-    }
-
-    .top-grid,
-    .bottom-grid{
-        grid-template-columns:1fr;
-    }
-
-    .stats-grid{
-        grid-template-columns:1fr;
-    }
-
-    .nav{
-        overflow-x:auto;
-        width:100%;
-    }
-    
-    .card{
-        min-height:auto;
-    }
-    
     .threatmap-container{
         grid-template-columns:1fr;
         grid-template-rows:1fr auto;
@@ -1077,6 +1051,187 @@ body{
         align-self:stretch;
         justify-content:center;
     }
+}
+
+/* Threat Detail Card */
+.threat-detail-card{
+    background:rgba(13,13,18,0.6);
+    border-radius:12px;
+    padding:16px;
+    border:1px solid rgba(124,58,237,0.1);
+}
+
+.threat-detail-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+    padding-bottom:12px;
+    border-bottom:1px solid rgba(124,58,237,0.1);
+}
+
+.threat-type-badge{
+    padding:4px 10px;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:600;
+}
+
+.severity-badge{
+    padding:4px 8px;
+    border-radius:4px;
+    font-size:10px;
+    font-weight:700;
+    background:rgba(124,58,237,0.2);
+    color:var(--lavender);
+}
+
+.threat-detail-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid rgba(124,58,237,0.05);
+}
+
+.threat-detail-row label{
+    font-size:12px;
+    color:var(--text-secondary);
+}
+
+.threat-detail-row span,
+.threat-detail-row code{
+    font-size:13px;
+    color:var(--text-primary);
+}
+
+.attempts-count{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:18px;
+    font-weight:700;
+    color:var(--coral);
+}
+
+.threat-detail-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+}
+
+.btn-action{
+    flex:1;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    background:var(--coral);
+    color:white;
+    transition:all 0.2s;
+}
+
+.btn-action:hover{
+    background:#e85a4f;
+    transform:translateY(-1px);
+}
+
+.btn-action.secondary{
+    background:rgba(124,58,237,0.2);
+    color:var(--lavender);
+}
+
+.btn-action.secondary:hover{
+    background:rgba(124,58,237,0.3);
+}
+
+/* Threat List */
+.threat-list-header{
+    font-size:14px;
+    font-weight:600;
+    color:var(--text-secondary);
+    margin-bottom:12px;
+    padding-bottom:8px;
+    border-bottom:1px solid rgba(124,58,237,0.1);
+}
+
+.threat-country-group{
+    margin-bottom:8px;
+    border-radius:10px;
+    overflow:hidden;
+    background:rgba(13,13,18,0.4);
+}
+
+.threat-country-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px;
+    cursor:pointer;
+    transition:background 0.2s;
+}
+
+.threat-country-header:hover{
+    background:rgba(124,58,237,0.1);
+}
+
+.country-name{
+    font-weight:600;
+    font-size:13px;
+}
+
+.threat-count{
+    font-size:11px;
+    color:var(--text-secondary);
+    background:rgba(124,58,237,0.15);
+    padding:2px 8px;
+    border-radius:10px;
+}
+
+.threat-country-items{
+    display:none;
+    padding:0 12px 12px;
+}
+
+.threat-country-items.expanded{
+    display:block;
+}
+
+.threat-list-item{
+    padding:10px;
+    margin-top:8px;
+    background:rgba(26,20,41,0.5);
+    border-radius:8px;
+    cursor:pointer;
+    transition:all 0.2s;
+    border:1px solid transparent;
+}
+
+.threat-list-item:hover{
+    background:rgba(124,58,237,0.1);
+    border-color:rgba(124,58,237,0.2);
+}
+
+.threat-item-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:4px;
+}
+
+.threat-type{
+    font-size:12px;
+    font-weight:600;
+}
+
+.threat-attempts{
+    font-size:11px;
+    color:var(--text-secondary);
+}
+
+.threat-item-ip{
+    font-family:monospace;
+    font-size:11px;
+    color:var(--text-muted);
 }
 </style>
 </head>
@@ -1173,13 +1328,11 @@ body{
                 </div>
             </div>
 
-            <div class="card">
-                <h3>World Map</h3>
-                <div class="world-map" id="worldMap">
-                    <div style="text-align:center;">
-                        <div style="font-size:48px;margin-bottom:10px;">🌍</div>
-                        <div>Attack locations will appear here</div>
-                    </div>
+<div class="card">
+                <h3>Quick Stats</h3>
+                <div style="text-align:center;padding:40px;">
+                    <div style="font-size:48px;margin-bottom:10px;">📊</div>
+                    <div>View detailed stats in Threat Map tab</div>
                 </div>
             </div>
 
@@ -1270,7 +1423,7 @@ body{
                         <span id="heatmapIcon">🔥</span> Toggle Heatmap
                     </button>
                 </div>
-                <div id="worldMap" class="map-container"></div>
+                <div id="threatMap" class="map-container"></div>
             </div>
             
             <!-- Country Details Sidebar -->
@@ -1917,7 +2070,7 @@ function initThreatMap() {
     if (threatMap) return; // Already initialized
     
     // Create map with dark theme
-    threatMap = L.map('worldMap', {
+    threatMap = L.map('threatMap', {
         center: [20, 0],
         zoom: 2,
         minZoom: 2,
@@ -1936,10 +2089,7 @@ function initThreatMap() {
         maxZoom: 19
     }).addTo(threatMap);
     
-    // Load country boundaries and attack data
-    loadCountryBoundaries();
-    
-    // Initial heatmap load
+    // Load threat markers directly
     updateThreatMap();
 }
 
@@ -2246,60 +2396,256 @@ function toggleHeatmap() {
 }
 
 // Update threat map with current filters
+let allThreatsData = [];
+let threatMarkersMap = {};
+
 async function updateThreatMap() {
     if (!threatMap) return;
     
-    // Get attack points for heatmap
-    const heatPoints = [];
-    allSessions.forEach(session => {
-        try {
-            const location = session.location || {};
-            // Prefer exact coordinates if valid
-            if (location.lat !== undefined && location.lon !== undefined && 
-                !isNaN(parseFloat(location.lat)) && !isNaN(parseFloat(location.lon))) {
-                const intensity = 0.5 + Math.random() * 0.5; // Simulate intensity
-                heatPoints.push([parseFloat(location.lat), parseFloat(location.lon), intensity]);
-            } else {
-                // Fallback to country approximations
-                const countryCode = location.country_code || location.country;
-                if (countryCode && countryCoordinates[countryCode]) {
-                    const coords = countryCoordinates[countryCode];
-                    const intensity = 0.5 + Math.random() * 0.5; // Simulate intensity
-                    heatPoints.push([coords[0], coords[1], intensity]);
-                }
-            }
-        } catch (err) {
-            console.warn('Error processing map point safely skipping:', err);
-        }
-    });
-    
-    // Update or create heatmap layer
-    if (heatmapEnabled) {
+    try {
+        // Fetch threat data from mock API which has real data
+        const response = await fetch('/api/threats');
+        const data = await response.json();
+        
+        const threats = data.threats || [];
+        allThreatsData = threats;
+        
+        // Clear existing markers
         if (heatmapLayer) {
             threatMap.removeLayer(heatmapLayer);
+            heatmapLayer = null;
+        }
+        threatMarkersMap = {};
+        
+        // Create markers for each threat location
+        const markers = [];
+        threats.forEach((threat, index) => {
+            if (threat.lat && threat.lng && 
+                threat.lat !== 0.0001 && threat.lng !== 0.0001 &&
+                !isNaN(parseFloat(threat.lat)) && !isNaN(parseFloat(threat.lng))) {
+                
+                const color = getSeverityColor(threat.severity);
+                const attackType = formatAttackType(threat.attack_type);
+                const threatId = 'threat-' + index;
+                
+                // Create custom circle marker
+                const marker = L.circleMarker([threat.lat, threat.lng], {
+                    radius: getSeverityRadius(threat.severity),
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.7
+                });
+                
+                // Click handler to show details
+                marker.on('click', function() {
+                    showThreatDetails(threat);
+                });
+                
+                marker.bindPopup(`
+                    <div style="font-family: Inter, sans-serif; padding: 8px; min-width: 150px;">
+                        <strong style="color: ${color};">${attackType}</strong><br>
+                        <span style="color: #666;">${threat.country_name}</span><br>
+                        <code style="color: #888;">${threat.ip}</code><br>
+                        <small style="color: #999;">${threat.attempts || 1} attempts</small><br>
+                        <small style="color: #666;">Click marker for details</small>
+                    </div>
+                `);
+                
+                threatMarkersMap[threatId] = { marker, threat };
+                markers.push(marker);
+            }
+        });
+        
+        // Add all markers as a feature group
+        if (markers.length > 0) {
+            heatmapLayer = L.layerGroup(markers).addTo(threatMap);
         }
         
-        if (heatPoints.length > 0) {
-            heatmapLayer = L.heatLayer(heatPoints, {
-                radius: 25,
-                blur: 15,
-                maxZoom: 10,
-                gradient: {
-                    0.0: '#1a1429',
-                    0.2: '#2d1f4f',
-                    0.4: '#7c3aed',
-                    0.6: '#f97066',
-                    0.8: '#ec4899',
-                    1.0: '#fbbf24'
-                }
-            }).addTo(threatMap);
+        // Update threat list in sidebar
+        updateThreatList(threats);
+        
+        // Fit map to show all markers
+        if (markers.length > 0) {
+            const group = L.featureGroup(markers);
+            threatMap.fitBounds(group.getBounds().pad(0.2));
         }
+        
+    } catch (err) {
+        console.warn('Error updating threat map:', err);
     }
+}
+
+function showThreatDetails(threat) {
+    const color = getSeverityColor(threat.severity);
+    const attackType = formatAttackType(threat.attack_type);
     
-    // Refresh country styles
-    Object.values(countryLayers).forEach(layer => {
-        layer.setStyle(countryStyle(layer.feature));
+    // Update sidebar header
+    document.getElementById('selectedCountry').innerHTML = `
+        <span style="color: ${color};">${threat.country_name}</span>
+    `;
+    
+    // Update sidebar content
+    document.getElementById('sidebarContent').innerHTML = `
+        <div class="threat-detail-card">
+            <div class="threat-detail-header" style="border-left: 4px solid ${color};">
+                <span class="threat-type-badge" style="background: ${color}20; color: ${color};">
+                    ${attackType}
+                </span>
+                <span class="severity-badge">${threat.severity?.toUpperCase()}</span>
+            </div>
+            
+            <div class="threat-detail-row">
+                <label>IP Address</label>
+                <code>${threat.ip}</code>
+            </div>
+            
+            <div class="threat-detail-row">
+                <label>Country</label>
+                <span>${threat.country_name} (${threat.country})</span>
+            </div>
+            
+            <div class="threat-detail-row">
+                <label>City</label>
+                <span>${threat.city || 'Unknown'}</span>
+            </div>
+            
+            <div class="threat-detail-row">
+                <label>Target</label>
+                <span>${threat.target || 'Unknown'}</span>
+            </div>
+            
+            <div class="threat-detail-row">
+                <label>Attempts</label>
+                <span class="attempts-count">${threat.attempts || 1}</span>
+            </div>
+            
+            <div class="threat-detail-row">
+                <label>Last Seen</label>
+                <span>${formatTimestamp(threat.timestamp)}</span>
+            </div>
+            
+            <div class="threat-detail-actions">
+                <button class="btn-action" onclick="blockIP('${threat.ip}')">Block IP</button>
+                <button class="btn-action secondary" onclick="addToWatchlist('${threat.ip}')">Watchlist</button>
+            </div>
+        </div>
+    `;
+    
+    // Show sidebar
+    document.getElementById('countrySidebar').classList.add('open');
+}
+
+function updateThreatList(threats) {
+    const container = document.getElementById('sidebarContent');
+    
+    // Group by country
+    const byCountry = {};
+    threats.forEach(threat => {
+        const country = threat.country_name || 'Unknown';
+        if (!byCountry[country]) byCountry[country] = [];
+        byCountry[country].push(threat);
     });
+    
+    let html = `
+        <div class="threat-list-header">
+            <span>${threats.length} Threats Detected</span>
+        </div>
+        <div class="threat-list">
+    `;
+    
+    // Add country groups
+    Object.entries(byCountry).forEach(([country, countryThreats]) => {
+        const totalAttempts = countryThreats.reduce((sum, t) => sum + (t.attempts || 1), 0);
+        html += `
+            <div class="threat-country-group">
+                <div class="threat-country-header" onclick="toggleCountryGroup('${country}')">
+                    <span class="country-name">${country}</span>
+                    <span class="threat-count">${countryThreats.length} threats</span>
+                </div>
+                <div class="threat-country-items" id="group-${country.replace(/\s/g, '_')}">
+        `;
+        
+        countryThreats.forEach(threat => {
+            const color = getSeverityColor(threat.severity);
+            html += `
+                <div class="threat-list-item" onclick="showThreatDetails(allThreatsData.find(t => t.ip === '${threat.ip}' && t.timestamp === '${threat.timestamp}'))">
+                    <div class="threat-item-header">
+                        <span class="threat-type" style="color: ${color};">${formatAttackType(threat.attack_type)}</span>
+                        <span class="threat-attempts">${threat.attempts || 1}</span>
+                    </div>
+                    <div class="threat-item-ip">${threat.ip}</div>
+                </div>
+            `;
+        });
+        
+        html += '</div></div>';
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function toggleCountryGroup(country) {
+    const group = document.getElementById('group-' + country.replace(/\s/g, '_'));
+    if (group) {
+        group.classList.toggle('expanded');
+    }
+}
+
+function closeSidebar() {
+    document.getElementById('countrySidebar').classList.remove('open');
+}
+
+function blockIP(ip) {
+    alert('IP ' + ip + ' blocked (demo)');
+}
+
+function addToWatchlist(ip) {
+    alert('IP ' + ip + ' added to watchlist (demo)');
+}
+
+function formatTimestamp(timestamp) {
+    if (!timestamp) return 'Unknown';
+    const date = new Date(timestamp);
+    return date.toLocaleString();
+}
+
+function getSeverityRadius(severity) {
+    const radii = {
+        'critical': 12,
+        'high': 10,
+        'medium': 8,
+        'low': 6
+    };
+    return radii[severity] || 8;
+}
+
+function getSeverityColor(severity) {
+    const colors = {
+        'critical': '#ef4444',
+        'high': '#F97066',
+        'medium': '#FBBF24',
+        'low': '#14B8A6'
+    };
+    return colors[severity] || '#94A3B8';
+}
+
+function formatAttackType(type) {
+    return (type || 'unknown').split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+}
+
+function getSeverityIntensity(severity) {
+    const intensities = {
+        'critical': 1.0,
+        'high': 0.8,
+        'medium': 0.5,
+        'low': 0.3
+    };
+    return intensities[severity] || 0.5;
 }
 
 // Extend switchTab to initialize map when needed
@@ -2308,10 +2654,14 @@ switchTab = function(tabId, button) {
     originalSwitchTab(tabId, button);
     
     if (tabId === 'threatmap') {
+        // Wait for tab to be visible
         setTimeout(() => {
             initThreatMap();
-            updateThreatMap();
-        }, 100);
+            // Delay heatmap update to ensure map container is rendered
+            setTimeout(() => {
+                updateThreatMap();
+            }, 300);
+        }, 200);
     }
 };
 

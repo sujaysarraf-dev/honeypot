@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threat Map Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 20px; background: #0D0D12; color: #F8FAFC; font-family: sans-serif; }
+        #map { width: 100%; height: 600px; border-radius: 12px; margin-top: 20px; }
+        h1 { color: #7C3AED; }
+        .stats { display: flex; gap: 20px; margin: 20px 0; }
+        .stat { background: #1A1429; padding: 15px 25px; border-radius: 8px; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #F97066; }
+        .stat-label { font-size: 12px; color: #94A3B8; }
+        #error { color: #ef4444; margin-top: 20px; }
+        #debug { background: #1A1429; padding: 10px; margin-top: 20px; font-size: 12px; max-height: 200px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Global Threat Map</h1>
+    <div class="stats">
+        <div class="stat"><div class="stat-value" id="threatCount">0</div><div class="stat-label">Threats</div></div>
+        <div class="stat"><div class="stat-value" id="markerCount">0</div><div class="stat-label">Markers</div></div>
+    </div>
+    <div id="map"></div>
+    <div id="debug"></div>
+    <div id="error"></div>
+
+    <script>
+        const debug = document.getElementById('debug');
+        const errorDiv = document.getElementById('error');
+        
+        function log(msg) {
+            debug.innerHTML += new Date().toISOString() + ': ' + msg + '<br>';
+        }
+        
+        log('Starting map initialization...');
+        
+        // Initialize map
+        const map = L.map('map', {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 2,
+            maxZoom: 8
+        });
+        
+        log('Map created');
+        
+        // Add tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }).addTo(map);
+        
+        log('Tile layer added');
+        
+        // Fetch threats and display
+        fetch('/api/threats')
+            .then(response => {
+                log('API response status: ' + response.status);
+                return response.json();
+            })
+            .then(data => {
+                log('Received ' + (data.threats?.length || 0) + ' threats');
+                document.getElementById('threatCount').textContent = data.threats?.length || 0;
+                
+                const markers = [];
+                data.threats?.forEach(threat => {
+                    if (threat.lat && threat.lng && !isNaN(threat.lat) && !isNaN(threat.lng)) {
+                        const color = {
+                            'critical': '#ef4444',
+                            'high': '#F97066',
+                            'medium': '#FBBF24',
+                            'low': '#14B8A6'
+                        }[threat.severity] || '#7C3AED';
+                        
+                        const marker = L.circleMarker([threat.lat, threat.lng], {
+                            radius: 10,
+                            fillColor: color,
+                            color: '#fff',
+                            weight: 2,
+                            fillOpacity: 0.7
+                        }).bindPopup(`
+                            <strong style="color:${color}">${threat.attack_type?.replace('_', ' ')}</strong><br>
+                            ${threat.country_name}<br>
+                            IP: ${threat.ip}<br>
+                            ${threat.attempts} attempts
+                        `);
+                        
+                        markers.push(marker);
+                    }
+                });
+                
+                log('Created ' + markers.length + ' markers');
+                document.getElementById('markerCount').textContent = markers.length;
+                
+                if (markers.length > 0) {
+                    L.layerGroup(markers).addTo(map);
+                    log('Markers added to map');
+                }
+            })
+            .catch(err => {
+                log('Error: ' + err.message);
+                errorDiv.textContent = 'Error: ' + err.message;
+            });
+    </script>
+</body>
+</html>
