@@ -526,10 +526,18 @@ def api_iocs():
             except OSError:
                 return 0
         for ioc_file in sorted(IOCS_DIR.glob("*.json"), key=safe_mtime, reverse=True)[:limit]:
-            ioc = read_json_file(ioc_file)
-            if ioc:
-                ioc['file'] = ioc_file.name
-                iocs.append(ioc)
+            try:
+                content = ioc_file.read_text()
+                ioc = json.loads(content)
+                # Skip if it's a list (like blocked_ips.json or watchlist.json)
+                if isinstance(ioc, list):
+                    continue
+                if isinstance(ioc, dict):
+                    ioc['file'] = ioc_file.name
+                    iocs.append(ioc)
+            except Exception as e:
+                logger.warning(f"Error reading IOC file {ioc_file}: {e}")
+                continue
     
     return jsonify(iocs)
 
