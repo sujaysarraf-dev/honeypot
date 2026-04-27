@@ -232,6 +232,12 @@ def index():
     return render_template('dashboard.html')
 
 
+@app.route('/map-test')
+def map_test():
+    """Test page for threat map"""
+    return render_template('map_test.html')
+
+
 @app.route('/attackers')
 @login_required
 def attackers():
@@ -317,6 +323,58 @@ def api_session(filename):
     session['attack_summary'] = get_attack_summary(attacks)
     
     return jsonify(session)
+
+
+@app.route('/api/threat-map')
+@login_required
+def api_threat_map():
+    """Get threat data for map visualization"""
+    threats = []
+    
+    if SESSIONS_DIR.exists():
+        def safe_mtime(x):
+            try:
+                return x.stat().st_mtime
+            except OSError:
+                return 0
+        for session_file in sorted(SESSIONS_DIR.glob("*.json"), key=safe_mtime, reverse=True)[:200]:
+            session = read_json_file(session_file)
+            if session:
+                client_ip = session.get('client_ip', '')
+                location = session.get('location', {})
+                
+                if location.get('lat') and location.get('lon') and \
+                   location.get('lat', 0) != 0.0001 and location.get('lon', 0) != 0.0001:
+                    
+                    attack_summary = session.get('attack_summary', {})
+                    severity = 'low'
+                    if attack_summary.get('critical', 0) > 0:
+                        severity = 'critical'
+                    elif attack_summary.get('high', 0) > 0:
+                        severity = 'high'
+                    elif attack_summary.get('medium', 0) > 0:
+                        severity = 'medium'
+                    
+                    threats.append({
+                        'id': session_file.stem,
+                        'ip': client_ip,
+                        'lat': location.get('lat'),
+                        'lon': location.get('lon'),
+                        'country': location.get('country_code', 'XX'),
+                        'country_name': location.get('country', 'Unknown'),
+                        'city': location.get('city', 'Unknown'),
+                        'service': session.get('service', 'unknown'),
+                        'severity': severity,
+                        'timestamp': session.get('timestamp', session_file.stem),
+                        'attack_types': session.get('attacks', []),
+                        'total_attacks': attack_summary.get('total', 0)
+                    })
+    
+    return jsonify({
+        'status': 'success',
+        'count': len(threats),
+        'threats': threats
+    })
 
 
 @app.route('/api/iocs')

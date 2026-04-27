@@ -63,22 +63,23 @@ IOC_PATTERNS = {
         r"exec\s+xp_",
     ],
     'command_injection': [
-        r";\s*(?:cat|ls|whoami|id|pwd|wget|curl)\b",
-        r"\|\s*(?:bash|sh|cmd|powershell)\b",
-        r"`\s*(?:cat|ls|whoami|id|pwd)\b",
+        r";\s*(cat|ls|whoami|id)",
+        r"\|\s*bash",
+        r"wget\s+http",
+        r"curl\s+http"
     ],
     'path_traversal': [
-        r"\.\./\.\./",
-        r"\.\.\\\.\.\\",
+        r"\.\./",
+        r"\.\.\\",
         r"/etc/passwd",
         r"/etc/shadow",
-        r"boot\.ini",
+        r"boot.ini",
     ],
     'xss': [
         r"<script.*?>",
         r"javascript:",
-        r"onerror\s*=",
-        r"onload\s*=",
+        r"onerror=",
+        r"onload=",
     ],
     'malicious_commands': [
         r"wget\s+http",
@@ -102,18 +103,13 @@ class IOCDetector:
     def __init__(self):
         self.detected_iocs = []
         self.alert_count = 0
-        self.recent_alerts = {}
         
     def detect(self, log_entry):
         """Detect IOCs in a log entry"""
         if isinstance(log_entry, str):
             message = log_entry
-            ip = 'unknown'
-            path = 'unknown'
         else:
             message = log_entry.get('message', '')
-            ip = log_entry.get('source_ip', log_entry.get('client_ip', 'unknown'))
-            path = log_entry.get('metadata', {}).get('path', 'unknown')
             
         detected = []
         
@@ -124,57 +120,11 @@ class IOCDetector:
                         'type': ioc_type,
                         'pattern': pattern,
                         'message': message[:200],
-                        'timestamp': datetime.now().isoformat(),
-                        'ip': ip,
-                        'path': path
+                        'timestamp': datetime.now().isoformat()
                     })
-                    break # Only one pattern per type
+                    logger.warning(f"Detected IOC: {ioc_type} - {pattern}")
                     
         return detected
-
-    def process_ioc(self, ioc, alert_sender, filepath):
-        ip = ioc.get('ip', 'unknown')
-        ioc_type = ioc['type']
-        key = (ip, ioc_type)
-        now = time.time()
-        
-        if key not in self.recent_alerts:
-            self.recent_alerts[key] = {
-                'first_seen': now,
-                'last_alert': 0,
-                'count': 0,
-                'logs': []
-            }
-            
-        state = self.recent_alerts[key]
-        state['count'] += 1
-        
-        if len(state['logs']) < 3:
-            state['logs'].append(ioc['message'])
-            
-        should_alert = False
-        if state['count'] == 1:
-            should_alert = True
-        elif state['count'] % ALERT_THRESHOLD == 0 and (now - state['last_alert']) > 30:
-            should_alert = True
-            
-        if should_alert:
-            state['last_alert'] = now
-            alert_msg = (
-                f"Attack Type: {ioc_type}\n"
-                f"Attacker IP: {ip}\n"
-                f"Target Path: {ioc['path']}\n"
-                f"Attempts: {state['count']}\n"
-                f"Explanation: Suspicious activity matching {ioc_type} patterns.\n\n"
-                f"Sample Logs:\n" + "\n".join(f"- {log}" for log in state['logs'])
-            )
-            self.save_ioc(ioc)
-            alert_sender.send_alert(
-                ioc_type=ioc_type,
-                pattern="Multiple",
-                message=alert_msg,
-                source=filepath
-            )
         
     def save_ioc(self, ioc):
         """Save detected IOC to file"""
@@ -188,7 +138,7 @@ class IOCDetector:
                 json.dump(ioc, f, indent=2)
 
         except Exception as e:
-            logger.debug(f"Failed to save IOC: {e}")
+            logger.error(f"Failed to save IOC: {e}")
 
 
 class AlertSender:
@@ -274,8 +224,6 @@ class LogFileHandler(FileSystemEventHandler):
     def process_log_file(self, filepath):
         """Process a log file for IOCs"""
         try:
-            if not os.path.exists(filepath):
-                return
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 lines = f.readlines()
                 
@@ -288,22 +236,27 @@ class LogFileHandler(FileSystemEventHandler):
                 # Try to parse as JSON
                 try:
                     log_entry = json.loads(line.strip())
-                    if 'werkzeug' in log_entry.get('logger', '').lower():
-                        continue
+                    message = log_entry.get('message', '')
                 except:
-                    log_entry = line.strip()
-                    if 'werkzeug' in log_entry.lower():
-                        continue
+                    message = line.strip()
                     
                 # Detect IOCs
-                detected = self.detector.detect(log_entry)
+                detected = self.detector.detect(message)
                 
                 if detected:
                     for ioc in detected:
-                        self.detector.process_ioc(ioc, self.alert_sender, filepath)
+                        self.detector.save_ioc(ioc)
+                        
+                        # Send structured alert via alert manager
+                        self.alert_sender.send_alert(
+                            ioc_type=ioc['type'],
+                            pattern=ioc['pattern'],
+                            message=ioc['message'],
+                            source=filepath
+                        )
                         
         except Exception as e:
-            logger.debug(f"Error processing log file {filepath}: {e}")
+            logger.error(f"Error processing log file {filepath}: {e}")
 
 
 def watch_logs():

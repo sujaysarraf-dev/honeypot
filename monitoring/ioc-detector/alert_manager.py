@@ -132,12 +132,12 @@ class TelegramBot:
                     time.sleep(self.retry_delay * (attempt + 1))
                     
             except requests.exceptions.RequestException as e:
-                logger.debug(f"Telegram request failed: {e}")
+                logger.error(f"Telegram request failed: {e}")
                 if attempt < self.max_retries - 1:
                     time.sleep(self.retry_delay * (attempt + 1))
             
             except Exception as e:
-                logger.debug(f"Unexpected error sending Telegram message: {e}")
+                logger.error(f"Unexpected error sending Telegram message: {e}")
                 return False
         
         return False
@@ -156,11 +156,11 @@ class TelegramBot:
                 logger.info(f"Telegram bot connected: @{bot_info.get('username')}")
                 return True
             else:
-                logger.debug(f"Telegram bot connection failed: {response.text}")
+                logger.error(f"Telegram bot connection failed: {response.text}")
                 return False
                 
         except Exception as e:
-            logger.debug(f"Telegram connection test failed: {e}")
+            logger.error(f"Telegram connection test failed: {e}")
             return False
 
 class SlackWebhook:
