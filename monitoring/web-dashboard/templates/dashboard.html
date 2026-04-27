@@ -2596,7 +2596,7 @@ async function updateThreatMap() {
 
 function showThreatDetails(threat) {
     const color = getSeverityColor(threat.severity);
-    const attackType = formatAttackType(threat.attack_type);
+    const attackType = formatAttackType(threat.attack_type || threat.service || 'unknown');
     
     // Update sidebar header
     document.getElementById('selectedCountry').innerHTML = `
@@ -2629,8 +2629,8 @@ function showThreatDetails(threat) {
             </div>
             
             <div class="threat-detail-row">
-                <label>Target</label>
-                <span>${threat.target || 'Unknown'}</span>
+                <label>Service</label>
+                <span>${threat.service || 'Unknown'}</span>
             </div>
             
             <div class="threat-detail-row">
@@ -2643,15 +2643,68 @@ function showThreatDetails(threat) {
                 <span>${formatTimestamp(threat.timestamp)}</span>
             </div>
             
-            <div class="threat-detail-actions">
-                <button class="btn-action" onclick="blockIP('${threat.ip}')">Block IP</button>
-                <button class="btn-action secondary" onclick="addToWatchlist('${threat.ip}')">Watchlist</button>
+            <div class="threat-detail-row" id="blockStatusRow">
+                <label>Status</label>
+                <span id="ipStatusDisplay">Loading...</span>
+            </div>
+            
+            <div class="threat-detail-actions" id="threatActions">
+                <button class="btn-action" id="blockBtn" onclick="blockIP('${threat.ip}')">Block IP</button>
+                <button class="btn-action secondary" id="watchlistBtn" onclick="addToWatchlist('${threat.ip}')">Watchlist</button>
             </div>
         </div>
     `;
     
+    // Check if IP is already blocked or in watchlist
+    checkIPStatus(threat.ip);
+    
     // Show sidebar
     document.getElementById('countrySidebar').classList.add('open');
+}
+
+async function checkIPStatus(ip) {
+    try {
+        const [blockedRes, watchlistRes] = await Promise.all([
+            fetch('/api/blocked-ips'),
+            fetch('/api/watchlist')
+        ]);
+        
+        const blockedData = await blockedRes.json();
+        const watchlistData = await watchlistRes.json();
+        
+        const isBlocked = blockedData.blocked?.some(b => b.ip === ip);
+        const isWatchlisted = watchlistData.watchlist?.some(w => w.ip === ip);
+        
+        const statusDisplay = document.getElementById('ipStatusDisplay');
+        const blockBtn = document.getElementById('blockBtn');
+        const watchlistBtn = document.getElementById('watchlistBtn');
+        
+        let statusHtml = '';
+        if (isBlocked && isWatchlisted) {
+            statusHtml = '<span style="color:#ef4444;">🔴 Blocked</span> & <span style="color:#FBBF24;">⭐ Watchlisted</span>';
+        } else if (isBlocked) {
+            statusHtml = '<span style="color:#ef4444;">🔴 Blocked</span>';
+        } else if (isWatchlisted) {
+            statusHtml = '<span style="color:#FBBF24;">⭐ Watchlisted</span>';
+        } else {
+            statusHtml = '<span style="color:#10B981;">✓ Clean</span>';
+        }
+        statusDisplay.innerHTML = statusHtml;
+        
+        // Update button states
+        if (isBlocked) {
+            blockBtn.textContent = '🔴 Blocked';
+            blockBtn.style.background = '#6b7280';
+            blockBtn.disabled = true;
+        }
+        
+        if (isWatchlisted) {
+            watchlistBtn.textContent = '⭐ In Watchlist';
+            watchlistBtn.style.background = '#92400e';
+        }
+    } catch (err) {
+        console.error('Error checking IP status:', err);
+    }
 }
 
 function updateThreatList(threats) {
