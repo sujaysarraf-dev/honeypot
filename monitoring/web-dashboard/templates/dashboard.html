@@ -1626,13 +1626,22 @@ async function loadSessions() {
 
 async function loadThreatStats() {
     try {
-        const response = await fetch('/api/threats');
+        const response = await fetch('/api/threat-map');
         if (!response.ok) return;
         
         const data = await response.json();
         const threats = data.threats || [];
         
-        // Initialize mini map
+        const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+        let totalAttacks = 0;
+        
+        threats.forEach(t => {
+            const severity = t.severity?.toLowerCase();
+            if (counts[severity] !== undefined) counts[severity]++;
+            totalAttacks += t.attempts || 1;
+        });
+        
+        // Update mini map with real data
         initMiniMap(threats);
     } catch (error) {
         console.error('Error loading threat stats:', error);
@@ -2510,8 +2519,10 @@ async function updateThreatMap() {
     if (!threatMap) return;
     
     try {
-        // Fetch threat data from mock API which has real data
-        const response = await fetch('/api/threats');
+        // Fetch real threat data from session files with geolocation
+        const response = await fetch('/api/threat-map');
+        if (!response.ok) return;
+        
         const data = await response.json();
         
         const threats = data.threats || [];
@@ -2528,15 +2539,15 @@ async function updateThreatMap() {
         const markers = [];
         threats.forEach((threat, index) => {
             if (threat.lat && threat.lng && 
-                threat.lat !== 0.0001 && threat.lng !== 0.0001 &&
+                threat.lat !== 0 && threat.lng !== 0 &&
                 !isNaN(parseFloat(threat.lat)) && !isNaN(parseFloat(threat.lng))) {
                 
                 const color = getSeverityColor(threat.severity);
-                const attackType = formatAttackType(threat.attack_type);
+                const attackType = formatAttackType(threat.attack_type || threat.service || 'unknown');
                 const threatId = 'threat-' + index;
                 
                 // Create custom circle marker
-                const marker = L.circleMarker([threat.lat, threat.lng], {
+                const marker = L.circleMarker([parseFloat(threat.lat), parseFloat(threat.lng)], {
                     radius: getSeverityRadius(threat.severity),
                     fillColor: color,
                     color: '#fff',
@@ -2555,8 +2566,7 @@ async function updateThreatMap() {
                         <strong style="color: ${color};">${attackType}</strong><br>
                         <span style="color: #666;">${threat.country_name}</span><br>
                         <code style="color: #888;">${threat.ip}</code><br>
-                        <small style="color: #999;">${threat.attempts || 1} attempts</small><br>
-                        <small style="color: #666;">Click marker for details</small>
+                        <small style="color: #999;">${threat.attempts || 1} attempts</small>
                     </div>
                 `);
                 

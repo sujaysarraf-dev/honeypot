@@ -326,10 +326,11 @@ def api_session(filename):
 
 
 @app.route('/api/threat-map')
-@login_required
+@app.route('/api/threats')
 def api_threat_map():
-    """Get threat data for map visualization"""
+    """Get threat data for map visualization - uses real session data with geolocation"""
     threats = []
+    seen_ips = set()
     
     if SESSIONS_DIR.exists():
         def safe_mtime(x):
@@ -337,43 +338,86 @@ def api_threat_map():
                 return x.stat().st_mtime
             except OSError:
                 return 0
-        for session_file in sorted(SESSIONS_DIR.glob("*.json"), key=safe_mtime, reverse=True)[:200]:
+        for session_file in sorted(SESSIONS_DIR.glob("*.json"), key=safe_mtime, reverse=True)[:500]:
             session = read_json_file(session_file)
             if session:
                 client_ip = session.get('client_ip', '')
-                location = session.get('location', {})
                 
-                if location.get('lat') and location.get('lon') and \
-                   location.get('lat', 0) != 0.0001 and location.get('lon', 0) != 0.0001:
-                    
-                    attack_summary = session.get('attack_summary', {})
-                    severity = 'low'
-                    if attack_summary.get('critical', 0) > 0:
-                        severity = 'critical'
-                    elif attack_summary.get('high', 0) > 0:
+                # Skip private/local IPs
+                if client_ip.startswith(('192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '127.', 'localhost', '::1')):
+                    continue
+                
+                # Get or lookup location
+                location = session.get('location')
+                if not location:
+                    try:
+                        location = get_ip_location(client_ip)
+                    except:
+                        location = {'country': 'Unknown', 'country_code': 'XX', 'city': 'Unknown', 'lat': 0, 'lon': 0, 'isp': 'Unknown'}
+                
+                lat = location.get('lat', 0)
+                lon = location.get('lon', 0)
+                
+                # Skip invalid coordinates
+                if not lat or not lon or lat == 0.0001 or lon == 0.0001:
+                    continue
+                
+                # Get attack info
+                attacks = session.get('attacks', [])
+                attack_summary = session.get('attack_summary', {})
+                service = session.get('service', session.get('type', 'unknown'))
+                method = session.get('method', '')
+                path = session.get('path', '')
+                
+                # Determine attack type
+                attack_type = 'unknown'
+                severity = 'low'
+                
+                if attacks:
+                    attack_type = attacks[0] if isinstance(attacks, list) else str(attacks)
+                elif path:
+                    if '/admin' in path or '/login' in path or '/wp-' in path or '/phpmyadmin' in path:
+                        attack_type = 'brute_force'
                         severity = 'high'
-                    elif attack_summary.get('medium', 0) > 0:
+                    elif 'SELECT' in str(session.get('data', '')).upper() or 'UNION' in str(session.get('data', '')).upper():
+                        attack_type = 'sql_injection'
+                        severity = 'critical'
+                    elif '<' in str(session.get('data', '')) and '>' in str(session.get('data', '')):
+                        attack_type = 'xss'
                         severity = 'medium'
-                    
-                    threats.append({
-                        'id': session_file.stem,
-                        'ip': client_ip,
-                        'lat': location.get('lat'),
-                        'lon': location.get('lon'),
-                        'country': location.get('country_code', 'XX'),
-                        'country_name': location.get('country', 'Unknown'),
-                        'city': location.get('city', 'Unknown'),
-                        'service': session.get('service', 'unknown'),
-                        'severity': severity,
-                        'timestamp': session.get('timestamp', session_file.stem),
-                        'attack_types': session.get('attacks', []),
-                        'total_attacks': attack_summary.get('total', 0)
-                    })
+                
+                # Avoid duplicate IPs (aggregate attacks from same IP)
+                ip_key = f"{client_ip}_{attack_type}"
+                if client_ip not in seen_ips:
+                    seen_ips.add(client_ip)
+                    attempts = 1
+                else:
+                    continue  # Skip duplicates
+                
+                threats.append({
+                    'id': session_file.stem,
+                    'ip': client_ip,
+                    'lat': lat,
+                    'lng': lon,
+                    'country': location.get('country_code', 'XX'),
+                    'country_name': location.get('country', 'Unknown'),
+                    'city': location.get('city', 'Unknown'),
+                    'service': service,
+                    'attack_type': attack_type,
+                    'severity': severity,
+                    'timestamp': session.get('timestamp', session_file.stem),
+                    'target': f"{method} {path}" if method else path,
+                    'attempts': attempts + attack_summary.get('total', 0)
+                })
+    
+    # Sort by timestamp (newest first)
+    threats.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
     
     return jsonify({
         'status': 'success',
         'count': len(threats),
-        'threats': threats
+        'threats': threats[:100],  # Limit to 100
+        'generated_at': datetime.utcnow().isoformat()
     })
 
 
