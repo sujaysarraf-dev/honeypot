@@ -1233,6 +1233,41 @@ body{
     font-size:11px;
     color:var(--text-muted);
 }
+
+/* Quick Stats Grid */
+.stat-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:12px;
+}
+
+.stat-box{
+    background:rgba(13,13,18,0.6);
+    padding:16px;
+    border-radius:12px;
+    border:1px solid rgba(124,58,237,0.1);
+    text-align:center;
+}
+
+.stat-value{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:24px;
+    font-weight:700;
+    color:var(--text-primary);
+    margin-bottom:4px;
+}
+
+.stat-value.critical{color:#ef4444;}
+.stat-value.high{color:#F97066;}
+.stat-value.medium{color:#FBBF24;}
+.stat-value.low{color:#14B8A6;}
+
+.stat-label{
+    font-size:11px;
+    color:var(--text-secondary);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+}
 </style>
 </head>
 <body>
@@ -1330,9 +1365,33 @@ body{
 
 <div class="card">
                 <h3>Quick Stats</h3>
-                <div style="text-align:center;padding:40px;">
-                    <div style="font-size:48px;margin-bottom:10px;">📊</div>
-                    <div>View detailed stats in Threat Map tab</div>
+                <div id="quickStats">
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="stat-threats">-</div>
+                            <div class="stat-label">Total Threats</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value critical" id="stat-critical">-</div>
+                            <div class="stat-label">Critical</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value high" id="stat-high">-</div>
+                            <div class="stat-label">High</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value medium" id="stat-medium">-</div>
+                            <div class="stat-label">Medium</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value low" id="stat-low">-</div>
+                            <div class="stat-label">Low</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="stat-attacks">-</div>
+                            <div class="stat-label">Total Attacks</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1578,6 +1637,35 @@ async function loadSessions() {
         if (list) {
             list.innerHTML = `<div class="empty-state"><p>Error loading sessions: ${error.message}</p></div>`;
         }
+    }
+    
+    // Load threat stats
+    loadThreatStats();
+}
+
+async function loadThreatStats() {
+    try {
+        const response = await fetch('/api/threats');
+        const data = await response.json();
+        const threats = data.threats || [];
+        
+        const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+        let totalAttacks = 0;
+        
+        threats.forEach(t => {
+            const severity = t.severity?.toLowerCase();
+            if (counts[severity] !== undefined) counts[severity]++;
+            totalAttacks += t.attempts || 1;
+        });
+        
+        document.getElementById('stat-threats').textContent = threats.length;
+        document.getElementById('stat-critical').textContent = counts.critical;
+        document.getElementById('stat-high').textContent = counts.high;
+        document.getElementById('stat-medium').textContent = counts.medium;
+        document.getElementById('stat-low').textContent = counts.low;
+        document.getElementById('stat-attacks').textContent = totalAttacks;
+    } catch (error) {
+        console.error('Error loading threat stats:', error);
     }
 }
 
